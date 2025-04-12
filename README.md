@@ -38,7 +38,7 @@ Clone the repository:
 bash
 Copy
 Edit
-git clone https://github.com/your-username/student-spending-dashboard.git
+git clone https://github.com/Priyanshi1004/student-spending-dashboard.git
 Open the app.R file in RStudio.
 
 Run the app:
