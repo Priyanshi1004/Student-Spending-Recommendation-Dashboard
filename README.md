@@ -1,6 +1,7 @@
 # Student-Spending-Recommendation-Dashboard:
 
 This dashboard presents an analysis of college students' spending habits, financial stress levels, savings behavior, and preferences in managing money.
+https://priyanshi-1004.shinyapps.io/Student_spending_dashboard/
 
 🧾 Student Spending Dashboard:
 
