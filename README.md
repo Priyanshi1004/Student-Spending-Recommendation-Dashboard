@@ -1,10 +1,13 @@
-# Student-Spending-Recommendation-Dashboard
+# Student-Spending-Recommendation-Dashboard:
+
 This dashboard presents an analysis of college students' spending habits, financial stress levels, savings behavior, and preferences in managing money.
 
-🧾 Student Spending Dashboard
+🧾 Student Spending Dashboard:
+
 A comprehensive interactive dashboard built using R Shiny to analyze and visualize student spending behavior. This project aims to uncover insights about financial habits, savings patterns, stress indicators, and payment preferences among students across various demographics.
 
-🚀 Features
+🚀 Features: 
+
 📊 Overview Tab: Demographic summary of students.
 💸 Spending Analysis: Category-wise expenditure trends.
 💰 Savings & Stress: Analysis of savings rate and financial stress indicators.
@@ -14,7 +17,8 @@ A comprehensive interactive dashboard built using R Shiny to analyze and visuali
 📂 Data Table: Filterable table view of raw dataset.
 🧠 Recommendations: Smart financial tips based on spending patterns.
 
-📂 Project Structure
+📂 Project Structure:
+
 bash
 Copy
 Edit
@@ -25,7 +29,8 @@ Edit
 ├── README.md                # Project documentation
 └── ...
 
-🛠️ Technologies Used
+🛠️ Technologies Used: 
+
 R
 Shiny
 Plotly (for interactive plots)
@@ -33,7 +38,8 @@ dplyr, ggplot2, tidyverse
 K-means Clustering
 Regression Models
 
-🧪 How to Run
+🧪 How to Run: 
+
 Clone the repository:
 bash
 Copy
@@ -42,18 +48,20 @@ git clone https://github.com/Priyanshi1004/student-spending-dashboard.git
 Open the app.R file in RStudio.
 
 Run the app:
+
 R
 Copy
 Edit
 shiny::runApp()
 
-📈 Dataset Info
+📈 Dataset Info: 
+
 This dataset contains fictional data representing the spending habits of 1000 students across various demographic groups and academic backgrounds.
 The dataset includes information such as age, gender, year in school, major, monthly income, financial aid received, and expenses in different spending categories.
 Spending categories include tuition, housing, food, transportation, books & supplies, entertainment, personal care, technology, health & wellness, and miscellaneous expenses.
 Additionally, the dataset includes the preferred payment method for each student.
-Columns:
 
+Columns:
 Age: Age of the student (in years)
 Gender: Gender of the student (Male, Female, Non-binary)
 Year in School: Year of study (Freshman, Sophomore, Junior, Senior)
@@ -72,7 +80,8 @@ Health & Wellness: Expenses for health and wellness (in dollars)
 Miscellaneous: Miscellaneous expenses (in dollars)
 Preferred Payment Method: Preferred payment method (Cash, Credit/Debit Card, Mobile Payment App)
 
-📌 Goals
+📌 Goals: 
+
 Identify high-spending student segments
 Recommend budgeting strategies
 Assist educational institutions in understanding student financial well-being
