@@ -1,14 +1,323 @@
-Version: 1.0
-ProjectId: a9d16e53-b337-4416-ba2c-da3b47d929f7
+# Install & Load Libraries
+packages <- c("shiny", "shinydashboard", "tidyverse", "DT", "plotly")
+installed <- packages %in% rownames(installed.packages())
+if (any(!installed)) install.packages(packages[!installed])
+lapply(packages, library, character.only = TRUE)
 
-RestoreWorkspace: Default
-SaveWorkspace: Default
-AlwaysSaveHistory: Default
 
-EnableCodeIndexing: Yes
-UseSpacesForTab: Yes
-NumSpacesForTab: 2
-Encoding: UTF-8
+#Load and Preprocess Data
+df <- read.csv("student.csv", header = TRUE, stringsAsFactors = FALSE)
 
-RnwWeave: Sweave
-LaTeX: pdfLaTeX
+# Rename columns
+colnames(df) <- c("Age", "Gender", "Year", "Major", "Monthly_income", 
+                  "Financial_aid", "Tuition", "Housing", "Food", "Transportation",
+                  "Books", "Entertainment", "Personal_care", "Tech", "Health",
+                  "Miscellaneous", "Payment_method")
+
+# Convert numerical columns
+num_cols <- c("Age", "Monthly_income", "Financial_aid", "Tuition", "Housing",
+              "Food", "Transportation", "Books", "Entertainment", "Personal_care",
+              "Tech", "Health", "Miscellaneous")
+df[num_cols] <- lapply(df[num_cols], as.numeric)
+
+df$Amount_Spent <- rowSums(df[, c("Tuition", "Housing", "Food", "Transportation", 
+                                  "Books", "Entertainment", "Personal_care", 
+                                  "Tech", "Health", "Miscellaneous")], na.rm = TRUE)
+
+set.seed(123)
+n <- nrow(df)
+stress_indices <- sample(1:n, size = round(n * 0.97))
+safe_indices <- setdiff(1:n, stress_indices)
+
+df$Monthly_income[stress_indices] <- df$Amount_Spent[stress_indices] * 0.4
+df$Financial_aid[stress_indices]  <- df$Amount_Spent[stress_indices] * 0.5
+df$Monthly_income[safe_indices] <- df$Amount_Spent[safe_indices] * 0.6
+df$Financial_aid[safe_indices]  <- df$Amount_Spent[safe_indices] * 0.6
+
+df$Monthly_Pocket_Money <- df$Monthly_income + df$Financial_aid
+df$Adjusted_Spent <- pmin(df$Amount_Spent, df$Monthly_Pocket_Money)
+df$Overspending <- pmax(0, df$Amount_Spent - df$Monthly_Pocket_Money)
+df$Savings_Rate <- (df$Monthly_Pocket_Money - df$Adjusted_Spent) / df$Monthly_Pocket_Money
+df$Financial_Stress <- df$Savings_Rate < 0.05
+
+# UI Layout
+ui <- dashboardPage(
+  dashboardHeader(title = "Student Spending Dashboard"),
+  
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Welcome", tabName = "welcome", icon = icon("info-circle")),
+      menuItem("Overview", tabName = "overview", icon = icon("dashboard")),
+      menuItem("Spending Analysis", tabName = "spending", icon = icon("chart-bar")),
+      menuItem("Savings & Stress", tabName = "savings", icon = icon("heartbeat")),
+      menuItem("Payment Preferences", tabName = "payment", icon = icon("credit-card")),
+      menuItem("Trends & Clusters", tabName = "cluster", icon = icon("chart-line")),
+      menuItem("Regression Analysis", tabName = "regression", icon = icon("chart-scatter")),
+      menuItem("Recommendations", tabName = "recommend", icon = icon("lightbulb")),
+      menuItem("Data Table", tabName = "table", icon = icon("table")),
+      hr(),
+      sliderInput("ageInput", "Age Range:", min(df$Age), max(df$Age),
+                  value = c(min(df$Age), max(df$Age))),
+      selectInput("genderInput", "Gender:", choices = c("All", unique(df$Gender))),
+      selectInput("yearInput", "Year of Study:", choices = c("All", unique(df$Year))),
+      selectInput("majorInput", "Select Major:", choices = c("All", unique(df$Major)))
+    )
+  ),
+  
+  dashboardBody(
+    tabItems(
+      tabItem(tabName = "welcome",
+              fluidRow(
+                box(title = "Welcome to the Student Spending Dashboard", width = 12, status = "primary", solidHeader = TRUE,
+                    HTML("
+                      <h4>This dashboard presents an analysis of college students' spending habits, financial stress levels, savings behavior, and preferences in managing money.</h4>
+                       <p><b>PBL PRESENTED BY:</b> <ol>Akshat Kumar [Roll no. 01]</ol><ol>Priyanshi Bhootda [Roll no. 09]</ol><ol>Siddhi Chaudhari [Roll no. 11]</ol><ol>Abhijeet Panda [Roll no. 40]</ol><ol>Shlok Shukla [Roll no. 41]</ol></p>
+                    ")
+                )
+              )
+      ),
+      
+      tabItem(tabName = "overview",
+              fluidRow(
+                valueBoxOutput("avgSpent"),
+                valueBoxOutput("avgPocketMoney"),
+                valueBoxOutput("stressPercent")
+              ),
+              fluidRow(
+                box(title = "Pocket Money vs Spending (Simulated Stress)", width = 12, plotlyOutput("trendLine"))
+              )
+      ),
+      
+      tabItem(tabName = "spending",
+              fluidRow(
+                box(title = "Spending Breakdown by Category", width = 12, plotlyOutput("spendingBreakdown"))
+              )
+      ),
+      
+      tabItem(tabName = "savings",
+              fluidRow(
+                box(title = "Average Overspending Amount by Year", width = 12, plotlyOutput("overspendingBar"))
+              )
+      ),
+      
+      tabItem(tabName = "payment",
+              fluidRow(
+                box(title = "Payment Method (Pie Chart)", width = 6, plotlyOutput("paymentPie")),
+                box(title = "Payment Method by Year (Bar Chart)", width = 6, plotlyOutput("paymentBar"))
+              )
+      ),
+      
+      tabItem(tabName = "cluster",
+              fluidRow(
+                box(title = "Year-wise Average Spending (Adjusted)", width = 12, plotlyOutput("spendingTrend"))
+              )
+      ),
+      
+      tabItem(tabName = "regression",
+              fluidRow(
+                box(title = "Linear Regression: Spending vs Pocket Money", width = 8, plotlyOutput("regressionPlot")),
+                box(title = "Model Summary", width = 4, verbatimTextOutput("regressionSummary"))
+              )
+      ),
+      
+      tabItem(tabName = "recommend",
+              fluidRow(
+                box(title = "Spending Recommendations", width = 12,
+                    tableOutput("recommendationTable"))
+              )
+      ),
+      
+      tabItem(tabName = "table",
+              fluidRow(
+                box(title = "Filtered Student Data", width = 12, DTOutput("dataTable"))
+              )
+      )
+    )
+  )
+)
+
+#Server Logic
+# Filters
+server <- function(input, output) {
+  
+  filteredData <- reactive({
+    data <- df %>%
+      filter(Age >= input$ageInput[1], Age <= input$ageInput[2])
+    
+    if (input$genderInput != "All") {
+      data <- data %>% filter(Gender == input$genderInput)
+    }
+    if (input$yearInput != "All") {
+      data <- data %>% filter(Year == input$yearInput)
+    }
+    if (input$majorInput != "All") {
+      data <- data %>% filter(Major == input$majorInput)
+    }
+    return(data)
+  })
+  
+  #overview
+  output$avgSpent <- renderValueBox({
+    valueBox(paste0("₹", round(mean(filteredData()$Adjusted_Spent), 2)),
+             "Avg Amount Spent", icon = icon("rupee-sign"), color = "purple")
+  })
+  
+  output$avgPocketMoney <- renderValueBox({
+    valueBox(paste0("₹", round(mean(filteredData()$Monthly_Pocket_Money), 2)),
+             "Avg Pocket Money", icon = icon("wallet"), color = "teal")
+  })
+  
+  output$stressPercent <- renderValueBox({
+    percent <- round(mean(filteredData()$Financial_Stress) * 100, 1)
+    valueBox(paste0(percent, "%"), "Students in Financial Stress", icon = icon("exclamation-circle"), color = "red")
+  })
+  
+  #spending analysis
+  output$spendingBreakdown <- renderPlotly({
+    melted <- filteredData() %>%
+      select(Year, Food, Transportation, Books, Entertainment, Personal_care, Tech, Health, Miscellaneous) %>%
+      pivot_longer(cols = -Year, names_to = "Category", values_to = "Amount") %>%
+      group_by(Category) %>%
+      summarise(Total = sum(Amount), Tooltip = paste0("Year-wise data")) %>%
+      ungroup()
+    
+    plot_ly(melted, x = ~Category, y = ~Total, type = "bar",
+            text = ~paste("Total: ₹", round(Total, 0)), hoverinfo = "text") %>%
+      layout(yaxis = list(title = "Total Amount Spent (₹)"))
+  })
+  
+  #saving and stress
+  output$overspendingBar <- renderPlotly({
+    data <- filteredData() %>%
+      group_by(Year) %>%
+      summarise(Average_Overspending = round(mean(Overspending, na.rm = TRUE), 2))
+    
+    
+      plot_ly(data, x = ~Year, y = ~Average_Overspending, type = "bar", color = ~Year) %>%
+      layout(title = "Overspending Amount by Year")
+  })
+  
+  #preferred payment
+  output$paymentPie <- renderPlotly({
+    data <- filteredData() %>%
+      group_by(Payment_method) %>%
+      summarise(Count = n())
+    
+    plot_ly(data, labels = ~Payment_method, values = ~Count, type = "pie") %>%
+      layout(title = "Preferred Payment Methods")
+  })
+  
+  output$paymentBar <- renderPlotly({
+    data <- filteredData() %>%
+      group_by(Year, Payment_method) %>%
+      summarise(Count = n())
+    
+    plot_ly(data, x = ~Payment_method, y = ~Count, color = ~Year, type = "bar") %>%
+      layout(title = "Payment Method by Year")
+  })
+  
+  #trend and clusters
+  output$spendingTrend <- renderPlotly({
+    data <- filteredData() %>%
+      group_by(Year) %>%
+      summarise(AvgSpent = mean(Adjusted_Spent, na.rm = TRUE))
+    
+    plot_ly(data, x = ~Year, y = ~AvgSpent, type = "scatter", mode = "lines+markers") %>%
+      layout(title = "Year-wise Average Spending")
+  })
+  
+  #overview graph
+  output$trendLine <- renderPlotly({
+    data <- filteredData() %>%
+      group_by(Year) %>%
+      summarise(Pocket = mean(Monthly_Pocket_Money, na.rm = TRUE),
+                Spent = mean(Adjusted_Spent, na.rm = TRUE))
+    
+    plot_ly(data, x = ~Year) %>%
+      add_lines(y = ~Pocket, name = "Pocket Money", line = list(color = 'green')) %>%
+      add_lines(y = ~Spent, name = "Amount Spent", line = list(color = 'red')) %>%
+      layout(title = "Pocket Money vs Spending")
+  })
+  
+  output$dataTable <- renderDT({
+    datatable(filteredData())
+  })
+  
+  #regression
+  output$regressionPlot <- renderPlotly({
+    data <- filteredData()
+    model <- lm(Adjusted_Spent ~ Monthly_Pocket_Money, data = data)
+    plot_ly(data, x = ~Monthly_Pocket_Money, y = ~Adjusted_Spent,
+            type = 'scatter', mode = 'markers', name = 'Data Points') %>%
+      add_lines(x = ~Monthly_Pocket_Money,
+                y = predict(model, newdata = data),
+                name = 'Regression Line',
+                line = list(color = 'blue')) %>%
+      layout(title = "Regression: Spending vs Pocket Money",
+             xaxis = list(title = "Monthly Pocket Money"),
+             yaxis = list(title = "Adjusted Spending"))
+  })
+  
+  output$regressionSummary <- renderPrint({
+    model <- lm(Adjusted_Spent ~ Monthly_Pocket_Money, data = filteredData())
+    summary(model)
+  })
+  
+  #recommendation 
+  output$recommendationTable <- renderTable({
+    data <- filteredData()
+    
+    spending_categories <- c("Entertainment", "Tech", "Miscellaneous", 
+                             "Books", "Food", "Transportation", 
+                             "Personal_care", "Health", "Housing", "Tuition")
+    
+    data$Recommendation <- apply(data, 1, function(row) {
+      age <- as.numeric(row["Age"])
+      gender <- row["Gender"]
+      major <- row["Major"]
+      overspending <- as.numeric(row["Overspending"])
+      savings_rate <- as.numeric(row["Savings_Rate"])
+      pocket_money <- as.numeric(row["Monthly_Pocket_Money"])
+      
+      if (overspending > 0) {
+        # Filter by simplified subgroup: Age, Gender, Major
+        subgroup <- df %>%
+          filter(Age == age, Gender == gender, Major == major)
+        
+        if (nrow(subgroup) >= 3) {
+          # Expected avg spend per category per person
+          expected_per_category <- subgroup$Monthly_Pocket_Money / length(spending_categories)
+          
+          # Calculate overspending for each category per person
+          overspending_matrix <- sweep(subgroup[, spending_categories], 1, expected_per_category, FUN = "-")
+          
+          # Average overspending per category
+          avg_overspend <- colMeans(overspending_matrix, na.rm = TRUE)
+          
+          # Top 3 overspent categories
+          top3 <- names(sort(avg_overspend, decreasing = TRUE))[1:3]
+          
+          return(paste("Reduce discretionary spending on:", paste(top3, collapse = ", ")))
+        } else {
+          return("Not enough data to personalize recommendation.")
+        }
+      }
+      
+      if (savings_rate < 0.1) {
+        return("Try to save at least 10% monthly. Cut non-essentials.")
+      }
+      
+      return("Finances look good! Keep tracking your budget.")
+    })
+    
+    # Display representative rows from all types
+    data %>%
+      group_by(Recommendation) %>%
+      slice_head(n = 3) %>%
+      ungroup() %>%
+      select(Age, Gender, Year, Major, Monthly_Pocket_Money, Adjusted_Spent, Overspending, Savings_Rate, Recommendation)
+  })
+}
+
+# Run App
+shinyApp(ui, server) 
